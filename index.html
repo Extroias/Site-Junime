@@ -195,10 +195,25 @@
       <div class="step-title">Quantas carnes?</div>
       <div class="selected" id="selectedSnackText"></div>
       <div class="buttons">
-        <button onclick="saveSale('1 carne')">1 carne</button>
-        <button onclick="saveSale('2 carnes')">2 carnes</button>
-        <button onclick="saveSale('3 carnes')">3 carnes</button>
-        <button onclick="saveSale('4 ou mais carnes')">4 ou mais</button>
+        <button onclick="selectMeatAmount('1 carne');">1 carne</button>
+        <button onclick="selectMeatAmount('2 carnes');">2 carnes</button>
+        <button onclick="selectMeatAmount('3 carnes');">3 carnes</button>
+        <button onclick="selectMeatAmount('4 ou mais carnes');">4 ou mais</button>
+      </div>
+      <div class="actions">
+        <button class="secondary" onclick="goBack()">Voltar</button>
+      </div>
+    </div>
+
+    
+    <div class="card hidden" id="stepPayment">
+      <div class="step-title">Qual o Pagamento?</div>
+      <div class="selected" id="selectedPaymentText"></div>
+      <div class="buttons">
+        <button onclick="selectPayment('Pix'); saveSale();">Pix</button>
+        <button onclick="selectPayment('Fichas'); saveSale();">Fichas</button>
+        <button onclick="selectPayment('VR'); saveSale();">VR</button>
+        <button onclick="selectPayment('Cartão'); saveSale();">Cartão</button>
       </div>
       <div class="actions">
         <button class="secondary" onclick="goBack()">Voltar</button>
@@ -206,6 +221,27 @@
       <div class="status" id="status"></div>
     </div>
 
+    <div class="card">
+      <div class="step-title">Base de dados</div>
+      <div class="actions">
+        <button class="success" onclick="exportCSV()">Exportar CSV</button>
+        <button class="secondary" onclick="undoLastSale()">Desfazer último</button>
+        <button class="danger" onclick="clearDatabase()">Limpar tudo</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Lanche</th>
+            <th>Número de carnes</th>
+            <th>Pagamento </th>
+            <th>Horário</th>
+          </tr>
+        </thead>
+        <tbody id="salesTable"></tbody>
+      </table>
+    </div>
+    
     <div class="card">
       <div class="step-title">Resumo</div>
 
@@ -238,32 +274,32 @@
           <div class="small-value" id="count4Mais">0</div>
         </div>
       </div>
-    </div>
 
-    <div class="card">
-      <div class="step-title">Base de dados</div>
-      <div class="actions">
-        <button class="success" onclick="exportCSV()">Exportar CSV</button>
-        <button class="secondary" onclick="undoLastSale()">Desfazer último</button>
-        <button class="danger" onclick="clearDatabase()">Limpar tudo</button>
+      <div class="meat-counters">
+        <div class="counter-box">
+          <div class="counter-label">Pix</div>
+          <div class="small-value" id="countPix">0</div>
+        </div>
+        <div class="counter-box">
+          <div class="counter-label">VR</div>
+          <div class="small-value" id="countVR">0</div>
+        </div>
+        <div class="counter-box">
+          <div class="counter-label">Fichas</div>
+          <div class="small-value" id="countFichas">0</div>
+        </div>
+        <div class="counter-box">
+          <div class="counter-label">Cartão</div>
+          <div class="small-value" id="countCartão">0</div>
+        </div>
       </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Lanche</th>
-            <th>Número de carnes</th>
-            <th>Horário</th>
-          </tr>
-        </thead>
-        <tbody id="salesTable"></tbody>
-      </table>
     </div>
   </div>
 
   <script>
     let selectedSnack = null;
+    let selectedPayment = null;
+    let selectedMeatAmount = null;
 
     function getSales() {
       return JSON.parse(localStorage.getItem('vendasLanches') || '[]');
@@ -281,21 +317,37 @@
       document.getElementById('status').innerText = '';
     }
 
+    function selectPayment(payment){
+      selectedPayment = payment;
+    }
+
+    function selectMeatAmount(meatAmount){
+      selectedMeatAmount = meatAmount
+      document.getElementById('stepMeat').classList.add('hidden');
+      document.getElementById('stepPayment').classList.remove('hidden');
+      document.getElementById('selectedPaymentText').innerText = 'Selecionado: ' + selectedSnack + ' - '+ selectedMeatAmount;
+      document.getElementById('status').innerText = '';
+    }
+
     function goBack() {
       selectedSnack = null;
+      selectedPayment = null;
+      selectedMeatAmount = null;
       document.getElementById('stepMeat').classList.add('hidden');
+      document.getElementById('stepPayment').classList.add('hidden');
       document.getElementById('stepSnack').classList.remove('hidden');
       document.getElementById('status').innerText = '';
     }
 
-    function saveSale(meatAmount) {
+    function saveSale() {
       if (!selectedSnack) return;
 
       const now = new Date();
 
       const sale = {
         lanche: selectedSnack,
-        carnes: meatAmount,
+        carnes: selectedMeatAmount,
+        pagamento: selectedPayment,
         horario: now.toLocaleString('pt-BR'),
         timestamp: now.toISOString()
       };
@@ -305,16 +357,16 @@
       setSales(sales);
 
       document.getElementById('status').innerText =
-        'Venda salva: ' + selectedSnack + ' - ' + meatAmount;
+        'Venda salva: ' + selectedSnack + ' - ' + selectedMeatAmount + ' - ' + selectedPayment;
 
       selectedSnack = null;
+      selectedMeatAmount = null;
+      selectedPayment = null;
 
       updateScreen();
 
       setTimeout(() => {
-        document.getElementById('stepMeat').classList.add('hidden');
-        document.getElementById('stepSnack').classList.remove('hidden');
-        document.getElementById('status').innerText = '';
+        goBack();
       }, 350);
     }
 
@@ -329,6 +381,11 @@
       const count3Carnes = sales.filter(s => s.carnes === '3 carnes').length;
       const count4Mais = sales.filter(s => s.carnes === '4 ou mais carnes').length;
 
+      const countPix = sales.filter(s => s.pagamento === 'Pix').length;
+      const countCartão = sales.filter(s => s.pagamento === 'Cartão').length;
+      const countVR = sales.filter(s => s.pagamento === 'VR').length;
+      const countFichas = sales.filter(s => s.pagamento === 'Fichas').length;
+
       document.getElementById('countXSalada').innerText = countXSalada;
       document.getElementById('countXBurguer').innerText = countXBurguer;
 
@@ -336,6 +393,11 @@
       document.getElementById('count2Carnes').innerText = count2Carnes;
       document.getElementById('count3Carnes').innerText = count3Carnes;
       document.getElementById('count4Mais').innerText = count4Mais;
+
+      document.getElementById('countPix').innerText = countPix;
+      document.getElementById('countCartão').innerText = countCartão;
+      document.getElementById('countVR').innerText = countVR;
+      document.getElementById('countFichas').innerText = countFichas;
 
       const table = document.getElementById('salesTable');
       table.innerHTML = '';
@@ -348,6 +410,7 @@
           <td>${originalIndex}</td>
           <td>${sale.lanche}</td>
           <td>${sale.carnes}</td>
+          <td>${sale.pagamento}</td>
           <td>${sale.horario}</td>
         `;
 
@@ -385,8 +448,8 @@
         return;
       }
 
-      const header = ['lanche', 'numero_de_carnes', 'horario'];
-      const rows = sales.map(s => [s.lanche, s.carnes, s.horario]);
+      const header = ['lanche', 'numero_de_carnes', 'pagamento', 'horario'];
+      const rows = sales.map(s => [s.lanche, s.carnes, s.pagamento, s.horario]);
 
       const csvContent = [header, ...rows]
         .map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(';'))
