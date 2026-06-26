@@ -228,6 +228,7 @@
         <button class="secondary" onclick="undoLastSale()">Desfazer último</button>
         <button class="danger" onclick="clearDatabase()">Limpar tudo</button>
       </div>
+      <div style="overflow-x: auto;">
       <table>
         <thead>
           <tr>
@@ -236,10 +237,13 @@
             <th>Número de carnes</th>
             <th>Pagamento </th>
             <th>Horário</th>
+            <th>Tempo de Preparo</th>
+            <th>Feito</th>
           </tr>
         </thead>
         <tbody id="salesTable"></tbody>
       </table>
+      </div>
     </div>
     
     <div class="card">
@@ -349,6 +353,7 @@
         carnes: selectedMeatAmount,
         pagamento: selectedPayment,
         horario: now.toLocaleString('pt-BR'),
+        timetaken: "--:--",
         timestamp: now.toISOString()
       };
 
@@ -368,6 +373,30 @@
       setTimeout(() => {
         goBack();
       }, 350);
+    }
+
+    function readyOrder(tableRow, checkboxele,timetakenele, sale){    
+      if(!checkboxele.checked)
+      {
+        tableRow.style.backgroundColor = "#ffc2c2";
+        timetakenele.innerHTML = "--:--";
+        return;
+      }
+      tableRow.style.backgroundColor = "#99ff99";
+      const timeTaken = new Date() - new Date(sale.timestamp);
+
+      const totalSeconds = Math.floor(timeTaken / 1000);
+
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+
+      const paddedMinutes = String(minutes).padStart(2, '0');
+      const paddedSeconds = String(seconds).padStart(2, '0');
+
+      const formattedTime = `${paddedMinutes}:${paddedSeconds}`;
+
+      timetakenele.innerHTML = formattedTime;
+      sale.timetaken = formattedTime;
     }
 
     function updateScreen() {
@@ -405,6 +434,16 @@
       sales.slice().reverse().forEach((sale, index) => {
         const originalIndex = sales.length - index;
         const row = document.createElement('tr');
+        row.style.backgroundColor = "#ffc2c2"
+
+        const ordertime = document.createElement('td');
+        ordertime.innerHTML = `<td>--:--</td>`
+
+        const checkboxcol = document.createElement('td');
+        const checkbox = document.createElement('input');
+        checkbox.type ="checkbox"
+        checkbox.addEventListener('change',(event) => {readyOrder(row, event.currentTarget, ordertime, sale); setSales(sales)});
+        checkboxcol.appendChild(checkbox);
 
         row.innerHTML = `
           <td>${originalIndex}</td>
@@ -414,6 +453,8 @@
           <td>${sale.horario}</td>
         `;
 
+        row.appendChild(ordertime);
+        row.appendChild(checkboxcol);
         table.appendChild(row);
       });
     }
@@ -448,8 +489,8 @@
         return;
       }
 
-      const header = ['lanche', 'numero_de_carnes', 'pagamento', 'horario'];
-      const rows = sales.map(s => [s.lanche, s.carnes, s.pagamento, s.horario]);
+      const header = ['Lanche', 'Numero de Carnes', 'Pagamento', 'Horário', 'Tempo de Preparo'];
+      const rows = sales.map(s => [s.lanche, s.carnes, s.pagamento, s.horario, s.timetaken]);
 
       const csvContent = [header, ...rows]
         .map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(';'))
