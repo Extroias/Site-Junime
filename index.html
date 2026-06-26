@@ -353,6 +353,7 @@
         carnes: selectedMeatAmount,
         pagamento: selectedPayment,
         horario: now.toLocaleString('pt-BR'),
+        checked: false,
         timetaken: "--:--",
         timestamp: now.toISOString()
       };
@@ -380,6 +381,7 @@
       {
         tableRow.style.backgroundColor = "#ffc2c2";
         timetakenele.innerHTML = "--:--";
+        sale.checked = false;
         return;
       }
       tableRow.style.backgroundColor = "#99ff99";
@@ -397,6 +399,7 @@
 
       timetakenele.innerHTML = formattedTime;
       sale.timetaken = formattedTime;
+      sale.checked = true;
     }
 
     function updateScreen() {
@@ -437,13 +440,19 @@
         row.style.backgroundColor = "#ffc2c2"
 
         const ordertime = document.createElement('td');
-        ordertime.innerHTML = `<td>--:--</td>`
+        ordertime.innerHTML = `<td>${sale.timetaken}</td>`
 
         const checkboxcol = document.createElement('td');
         const checkbox = document.createElement('input');
         checkbox.type ="checkbox"
         checkbox.addEventListener('change',(event) => {readyOrder(row, event.currentTarget, ordertime, sale); setSales(sales)});
         checkboxcol.appendChild(checkbox);
+
+        if(sale.checked) 
+        {
+          checkbox.setAttribute("checked", "");
+          row.style.backgroundColor = "#99ff99";
+        }
 
         row.innerHTML = `
           <td>${originalIndex}</td>
@@ -452,6 +461,7 @@
           <td>${sale.pagamento}</td>
           <td>${sale.horario}</td>
         `;
+
 
         row.appendChild(ordertime);
         row.appendChild(checkboxcol);
